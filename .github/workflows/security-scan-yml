@@ -1,0 +1,45 @@
+name: DevSecOps Security Scan
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Trivy Filesystem Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+
+      - name: Build Docker Image
+        run: docker build -t devsecops-app:latest .
+
+      - name: Run Trivy Docker Image Scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: 'devsecops-app:latest'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
